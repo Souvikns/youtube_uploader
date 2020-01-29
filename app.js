@@ -63,14 +63,14 @@ app.post('/list', (req, res) => {
         client_secret: CREDENTIALS.web.client_secret,
         redirect_url: CREDENTIALS.web.redirect_uris[0]
     });
-    
+
     opn(oauth.generateAuthUrl({
         access_type: "offline",
         scope: ["https://www.googleapis.com/auth/youtube.upload"]
     }))
-    
+
     // Handle oauth2 callbacks 
-    
+
     server.addPage("/oauth2callback", Lien => {
         Logger.log("Trying to get the token using the following code " + Lien.query.code)
         oauth.getToken(Lien.query.code, (err, tokens) => {
@@ -80,9 +80,9 @@ app.post('/list', (req, res) => {
             }
             Logger.log("Got the tokens")
             oauth.setCredentials(tokens)
-    
+
             Lien.end("The video is being upload. Check out the logs in the terminal ")
-    
+
             var req = youtubeApi.videos.insert({
                 resource: {
                     // Video title and description 
@@ -94,23 +94,23 @@ app.post('/list', (req, res) => {
                         // do not want to spam subcribers 
                         privacyStatus: "private"
                     }
-    
+
                 },
                 part: "snippet,status",
                 media: {
                     body: fs.createReadStream("D:/Users/Souvi/Videos/test.mp4")
                 }
-    
-            },(err,data)=>{
+
+            }, (err, data) => {
                 console.log("Done")
                 return res.redirect('/')
             })
             setInterval(function () {
                 Logger.log(`${prettyBytes(req.req.connection._bytesDispatched)} bytes uploaded.`);
-            }, 250);    
-        }) 
+            }, 250);
+        })
     })
-    
+
 })
 
 
