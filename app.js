@@ -14,6 +14,19 @@ const opn = require('opn')
 const Logger = require('bug-killer')
 const prettyBytes = require('pretty-bytes')
 const readJson = require('r-json')
+const multer = require('multer')
+
+const storage = multer.diskStorage({
+    destination: function(req,file,cb){
+        cb(null,'uploads' )
+    } ,
+    filename: function(req,file,cb){
+        cb(null,file.fieldname+'-'+Date.now()+'.mp4')
+    }
+})
+
+
+const upload = multer({storage: storage})
 //============================================
 
 
@@ -54,9 +67,10 @@ app.get('/', (req, res) => {
 })
 
 
-app.post('/list', (req, res) => {
-
-
+app.post('/list', upload.single('image'),(req, res) => {
+    console.log(req.file)
+    const path = './uploads/'+req.file.filename
+    //oaut 
     let oauth = youtubeApi.authenticate({
         type: "oauth",
         client_id: CREDENTIALS.web.client_id,
@@ -92,17 +106,18 @@ app.post('/list', (req, res) => {
                     },
                     status: {
                         // do not want to spam subcribers 
-                        privacyStatus: "private"
+                        privacyStatus: "public"
                     }
 
                 },
                 part: "snippet,status",
                 media: {
-                    body: fs.createReadStream("D:/Users/Souvi/Videos/test.mp4")
+                    body: fs.createReadStream(path)
                 }
 
             }, (err, data) => {
                 console.log("Done")
+                process.exit()
                 return res.redirect('/')
             })
             setInterval(function () {

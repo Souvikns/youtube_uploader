@@ -8,9 +8,9 @@
 </head>
 <body>
 
-    <form action="/list" method="post">
+    <form action="/list" method="post" enctype="multipart/form-data">
         <label>Choose File: <br></label>
-        <input type="file"/>
+        <input type="file" name="image" multiple/>
         <br>
         <button type="submit">Upload to Youtube</button>
 
