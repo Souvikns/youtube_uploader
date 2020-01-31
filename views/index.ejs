@@ -12,13 +12,26 @@
         <label>Choose File: <br></label>
         <input type="file" name="image" multiple/>
         <br>
+        <label>Title</label><br>
+        <input type="text" name="title" /><br>
+        <label>Description</label><br>
+        <input type="text" name="description"><br>
+        <input type="checkbox" name="" id="">
         <button type="submit">Upload to Youtube</button>
-
-    
     </form>
 
+    <% if(isLogin===false){%>
+        <form action="/login" method="POST" >
+            <button type="submit">Login to google</button>
+        </form>
+    <% } %>
 
+
+
+
+    <script>
     
+    </script>
     
 </body>
 </html>

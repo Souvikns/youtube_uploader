@@ -17,16 +17,18 @@ const readJson = require('r-json')
 const multer = require('multer')
 
 const storage = multer.diskStorage({
-    destination: function(req,file,cb){
-        cb(null,'uploads' )
-    } ,
-    filename: function(req,file,cb){
-        cb(null,file.fieldname+'-'+Date.now()+'.mp4')
+    destination: function (req, file, cb) {
+        cb(null, 'uploads')
+    },
+    filename: function (req, file, cb) {
+        cb(null, file.fieldname + '-' + Date.now() + '.mp4')
     }
 })
 
 
-const upload = multer({storage: storage})
+const upload = multer({
+    storage: storage
+})
 //============================================
 
 
@@ -51,7 +53,6 @@ let server = new Lien({
     port: 5000
 })
 
-//Authenticate 
 
 
 
@@ -59,73 +60,82 @@ let server = new Lien({
 
 
 var isLoggedIn = false
+let oauth = youtubeApi.authenticate({
+    type: "oauth",
+    client_id: CREDENTIALS.web.client_id,
+    client_secret: CREDENTIALS.web.client_secret,
+    redirect_url: CREDENTIALS.web.redirect_uris[0]
+});
+
+app.post('/login', (req, res) => {
+    opn(oauth.generateAuthUrl({
+        access_type: "offline",
+        scope: ["https://www.googleapis.com/auth/youtube.upload"]
+    }))
+})
+
+app.get('/success', (req, res) => {
+    res.render('success', {})
+
+})
 
 app.get('/', (req, res) => {
     res.render('index', {
         isLogin: isLoggedIn
     })
+
+})
+app.get('/oauth2callback', (req, res) => {
+    oauth.getToken(req.query.code, (err, tokens) => {
+        if (err) {
+            return Logger.log(err)
+        }
+        Logger.log('Got the tokens')
+        oauth.setCredentials(tokens)
+        isLoggedIn = true
+        res.redirect('/')
+
+    })
+
+
 })
 
 
-app.post('/list', upload.single('image'),(req, res) => {
+app.post('/list', upload.single('image'), (req, res) => {
     console.log(req.file)
-    const path = './uploads/'+req.file.filename
-    //oaut 
-    let oauth = youtubeApi.authenticate({
-        type: "oauth",
-        client_id: CREDENTIALS.web.client_id,
-        client_secret: CREDENTIALS.web.client_secret,
-        redirect_url: CREDENTIALS.web.redirect_uris[0]
-    });
+    const path = './uploads/' + req.file.filename
+    const title = req.body.title
+    const description = req.body.description
+    const fileSize = req.file.size
 
-    opn(oauth.generateAuthUrl({
-        access_type: "offline",
-        scope: ["https://www.googleapis.com/auth/youtube.upload"]
-    }))
-
-    // Handle oauth2 callbacks 
-
-    server.addPage("/oauth2callback", Lien => {
-        Logger.log("Trying to get the token using the following code " + Lien.query.code)
-        oauth.getToken(Lien.query.code, (err, tokens) => {
-            if (err) {
-                Lien.lien(err, 400)
-                return Logger.log(err)
+    var req = youtubeApi.videos.insert({
+        resource: {
+            // Video title and description 
+            snippet: {
+                title: title,
+                description: description
+            },
+            status: {
+                privacyStatus: "public"
             }
-            Logger.log("Got the tokens")
-            oauth.setCredentials(tokens)
 
-            Lien.end("The video is being upload. Check out the logs in the terminal ")
+        },
+        part: "snippet,status",
+        media: {
+            body: fs.createReadStream(path)
+        },
+        onUploadProgress: evt => {
+            const progress = (evt.bytesRead / fileSize) * 100
+            readline.clearLine(process.stdout, 0);
+            readline.cursorTo(process.stdout, 0, null);
+            process.stdout.write(`${Math.round(progress)}% complete`);
+        }
 
-            var req = youtubeApi.videos.insert({
-                resource: {
-                    // Video title and description 
-                    snippet: {
-                        title: "Testing Youtube api",
-                        description: "Test video upload"
-                    },
-                    status: {
-                        // do not want to spam subcribers 
-                        privacyStatus: "public"
-                    }
-
-                },
-                part: "snippet,status",
-                media: {
-                    body: fs.createReadStream(path)
-                }
-
-            }, (err, data) => {
-                console.log("Done")
-                process.exit()
-                return res.redirect('/')
-            })
-            setInterval(function () {
-                Logger.log(`${prettyBytes(req.req.connection._bytesDispatched)} bytes uploaded.`);
-            }, 250);
-        })
+    }, (err, data) => {
+        console.log("Done")
+        res.send("Done")
+        
     })
-
 })
 
 
@@ -133,10 +143,8 @@ app.post('/list', upload.single('image'),(req, res) => {
 //============================================
 
 
-
-
 //app 
 
-app.listen(3000, () => {
+app.listen(5000, () => {
     console.log("Server started at port 3000....")
 })
